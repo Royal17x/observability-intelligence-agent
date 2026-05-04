@@ -11,8 +11,21 @@
 - **Infra:** Docker Compose, GitHub Actions
 
 ## Architecture
+```
+User → POST /analyze → ObservabilityAgent
+                           ↓ tool_calls
+                    PrometheusTool → Prometheus HTTP API
+                    JaegerTool     → Jaeger HTTP API
+                           ↓ results
+                    Groq LLM (Llama 3.3) → analysis text
+                           ↓
+                    PostgreSQL (save + return id)
+```
+## Observability
 
-TODO
+- Metrics: http://localhost:8000/metrics (Prometheus format)
+- Prometheus UI: http://localhost:9090
+- Jaeger UI: http://localhost:16686
 
 ## Quick Start
 
