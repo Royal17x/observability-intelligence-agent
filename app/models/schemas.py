@@ -29,4 +29,4 @@ class AnalysisResponse(BaseModel):
     issues: list[Issue]
     summary: str
     recomendations: list[str]
-    analyzed_at: datetime = Field(default_factory=datetime.datetime.utc)
+    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
