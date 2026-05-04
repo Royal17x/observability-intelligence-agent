@@ -2,6 +2,7 @@ import json
 from groq import Groq
 from app.tools.prometheus_tool import PrometheusTool
 from app.tools.jaeger_tool import JaegerTool
+from app.config.logging import logger
 
 TOOLS = [
     {
@@ -64,6 +65,8 @@ class ObservabilityAgent:
         return {"error": "unknown tool"}
 
     async def analyze(self, service_name: str, time_range_minutes: int, question: str) -> str:
+        logger.info("analysis_started",
+                    service=service_name, question=question)
         prompt = f"""Ты — эксперт по анализу production-систем.
 Проанализируй сервис '{service_name}' за последние {time_range_minutes} минут.
 Вопрос: {question}
@@ -95,9 +98,10 @@ class ObservabilityAgent:
                 for tool_call in response.choices[0].message.tool_calls:
                     function_name = tool_call.function.name
                     arguments = json.loads(tool_call.function.arguments)
-
+                    logger.info("tool_called", tool=function_name,
+                                arguments=arguments)
                     result = await self._execute_tool(function_name, arguments)
-
+                    logger.info("analysis_completed", service=service_name)
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
