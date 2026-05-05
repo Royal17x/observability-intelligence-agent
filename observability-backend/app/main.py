@@ -10,7 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.agents.postmortem_agent import ObservabilityAgent
 from app.services.analysis_service import save_analysis
 from app.services.analysis_service import get_analyses
-from app.services.db import get_connection
+from app.services.db import get_pool
 from app.config.logging import setup_logging
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -50,19 +50,20 @@ async def analyze_stat(request: AnalysisRequest):
         request.time_range_minutes,
         request.question
     )
-    conn = await get_connection()
-    try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
         analysis_id = await save_analysis(conn, request.service_name, request.question, result)
-    finally:
-        await conn.close()
     return {"id": analysis_id, "result": result}
 
 
 @app.get("/analyses")
-async def get_stat():
-    conn = await get_connection()
-    try:
+async def get_analyses_list():
+    pool = await get_pool()
+    async with pool.acquire() as conn:
         analyses = await get_analyses(conn)
-    finally:
-        await conn.close()
     return {"analyses": analyses}
+
+@app.get("/services")
+async def get_services():
+    services = await prometheus.get_services()
+    return {"services": services}

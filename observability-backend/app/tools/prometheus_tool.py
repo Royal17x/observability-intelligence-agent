@@ -1,6 +1,15 @@
-from urllib.parse import quote
-
 import aiohttp
+import yaml
+from pathlib import Path
+
+
+def load_metrics_config() -> dict:
+    config_path = Path(__file__).parent.parent.parent / "metrics_config.yaml"
+    with open(config_path) as f:
+        return yaml.safe_load(f)
+
+
+METRICS_CONFIG = load_metrics_config()
 
 
 class PrometheusTool:
@@ -12,31 +21,45 @@ class PrometheusTool:
             url = f"{self.base_url}/api/v1/query?query={promql}"
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
-                    print(f"STATUS: {response.status}, URL: {url[:80]}")
                     data = await response.json()
                     result = data["data"]["result"]
                     if not result:
                         return None
                     return float(result[0]["value"][1])
         except Exception as e:
-            print(f"ERROR: {e}")
+            print(f"PROMETHEUS ERROR: {e}")
             return None
 
     async def get_metrics(self, service_name: str, time_range_minutes: int) -> dict:
         range_str = f"{max(time_range_minutes, 5)}m"
 
-        rps = await self._query(
-            f'rate(flagr_http_requests_total{{job="{service_name}"}}[{range_str}])'
+        service_config = METRICS_CONFIG["services"].get(
+            service_name,
+            METRICS_CONFIG["services"]["default"]
         )
-        p99 = await self._query(
-            f'histogram_quantile(0.99, rate(flagr_http_request_duration_seconds_bucket{{job="{service_name}"}}[{range_str}]))'
-        )
-        error_rate = await self._query(
-            f'rate(flagr_http_requests_total{{job="{service_name}",status=~"5.."}}[{range_str}])'
-        )
+
+        rps_query = service_config["rps"].format(service=service_name, range=range_str)
+        p99_query = service_config["p99"].format(service=service_name, range=range_str)
+        errors_query = service_config["errors"].format(service=service_name, range=range_str)
+
+        rps = await self._query(rps_query)
+        p99 = await self._query(p99_query)
+        error_rate = await self._query(errors_query)
+
         return {
             "rps": rps,
             "p99_latency": p99,
             "error_rate": error_rate,
             "status": "ok" if any([rps, p99, error_rate]) else "no_data"
         }
+
+    async def get_services(self) -> list[str]:
+        try:
+            url = f"{self.base_url}/api/v1/targets"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+                    targets = data["data"]["activeTargets"]
+                    return [t["labels"]["job"] for t in targets]
+        except Exception:
+            return []
