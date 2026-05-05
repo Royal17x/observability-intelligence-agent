@@ -46,4 +46,9 @@ export const api = {
   healthCheck: async (): Promise<{ message: string }> => {
     return fetchWithError<{ message: string }>(`${API_BASE_URL}/`);
   },
+
+  getServices: async (): Promise<string[]> => {
+    return fetchWithError<{ services: string[] }>(`${API_BASE_URL}/services`)
+      .then(r => r.services);
+  },
 };
