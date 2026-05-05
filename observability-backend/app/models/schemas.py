@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -29,4 +28,4 @@ class AnalysisResponse(BaseModel):
     issues: list[Issue]
     summary: str
     recomendations: list[str]
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=datetime.now(timezone.utc))

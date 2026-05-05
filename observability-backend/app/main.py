@@ -12,6 +12,7 @@ from app.services.analysis_service import save_analysis
 from app.services.analysis_service import get_analyses
 from app.services.db import get_connection
 from app.config.logging import setup_logging
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -22,6 +23,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 Instrumentator().instrument(app).expose(app)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000",
+                   "http://127.0.0.1:3000",  "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 client = Groq(api_key=settings.groq_api_key)
 prometheus = PrometheusTool(base_url=settings.prometheus_url)
