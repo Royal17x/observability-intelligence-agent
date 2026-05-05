@@ -1,4 +1,4 @@
-import httpx
+import aiohttp
 
 
 class JaegerTool:
@@ -14,27 +14,23 @@ class JaegerTool:
 
     async def get_traces_summary(self, service_name: str, limit: int = 20) -> dict:
         try:
-            async with httpx.AsyncClient() as client:
-                url = f"{self.base_url}/api/traces?service={service_name}&limit={limit}"
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
-                traces = data["data"]
+            url = f"{self.base_url}/api/traces?service={service_name}&limit={limit}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+                    traces = data["data"]
+
             total_traces = len(traces)
-
-            error_traces = len(
-                [trace for trace in traces if self._has_error(trace)])
-
-            durations = [trace["spans"][0]
-                         ["duration"] / 1000 for trace in traces]
-
+            error_traces = len([t for t in traces if self._has_error(t)])
+            durations = [t["spans"][0]["duration"] / 1000 for t in traces]
             avg_duration_ms = sum(durations) / \
                 len(durations) if durations else 0.0
-
-            slow_operations = [span["operationName"]
-                               for trace in traces
-                               for span in trace["spans"]
-                               if span["duration"] / 1000 > 1000]
+            slow_operations = [
+                span["operationName"]
+                for trace in traces
+                for span in trace["spans"]
+                if span["duration"] / 1000 > 1000
+            ]
             return {
                 "total_traces": total_traces,
                 "error_traces": error_traces,
@@ -42,7 +38,8 @@ class JaegerTool:
                 "slow_operations": slow_operations,
                 "status": "ok" if traces else "no_data"
             }
-        except Exception:
+        except Exception as e:
+            print(f"JAEGER ERROR: {e}")
             return {
                 "total_traces": 0,
                 "error_traces": 0,
