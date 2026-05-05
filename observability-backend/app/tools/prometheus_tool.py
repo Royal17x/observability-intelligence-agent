@@ -38,13 +38,12 @@ class PrometheusTool:
             METRICS_CONFIG["services"]["default"]
         )
 
-        rps_query = service_config["rps"].format(service=service_name, range=range_str)
-        p99_query = service_config["p99"].format(service=service_name, range=range_str)
-        errors_query = service_config["errors"].format(service=service_name, range=range_str)
+        def build_query(template: str) -> str:
+            return template.replace("{service}", service_name).replace("{range}", range_str)
 
-        rps = await self._query(rps_query)
-        p99 = await self._query(p99_query)
-        error_rate = await self._query(errors_query)
+        rps = await self._query(build_query(service_config["rps"]))
+        p99 = await self._query(build_query(service_config["p99"]))
+        error_rate = await self._query(build_query(service_config["errors"]))
 
         return {
             "rps": rps,
@@ -60,6 +59,9 @@ class PrometheusTool:
                 async with session.get(url) as response:
                     data = await response.json()
                     targets = data["data"]["activeTargets"]
-                    return [t["labels"]["job"] for t in targets]
-        except Exception:
+                    return sorted(list(set(
+                        t["labels"]["job"] for t in targets if t["health"] == "up"
+                    )))
+        except Exception as e:
+            print(f"SERVICES ERROR: {e}")
             return []

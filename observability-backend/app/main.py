@@ -1,7 +1,6 @@
 from groq import Groq
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.services.db import create_tables
 from app.config.config import settings
 from app.models.schemas import AnalysisRequest
 from app.tools.prometheus_tool import PrometheusTool
@@ -10,7 +9,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.agents.postmortem_agent import ObservabilityAgent
 from app.services.analysis_service import save_analysis
 from app.services.analysis_service import get_analyses
-from app.services.db import get_pool
+from app.services.db import get_pool, create_tables
 from app.config.logging import setup_logging
 from fastapi.middleware.cors import CORSMiddleware
 

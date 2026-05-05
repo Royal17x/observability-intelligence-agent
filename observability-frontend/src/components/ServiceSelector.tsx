@@ -15,7 +15,18 @@ const DEFAULT_SERVICES = [
   { value: 'api-gateway', label: 'API Gateway' },
 ];
 
-export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ value, onChange }) => {
+export const ServiceSelector: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => {
+  const [services, setServices] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getServices()
+      .then(setServices)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div>Загрузка...</div>;
+
   return (
     <div className="relative">
       <label htmlFor="service-select" className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -27,7 +38,6 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ value, onChang
           className="absolute left-3 top-1/2 -translate-y-1/2 text-rose-400 pointer-events-none"
         />
         <select
-          id="service-select"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full pl-10 pr-10 py-2.5 bg-white border border-rose-200 rounded-xl text-slate-700 
@@ -35,11 +45,7 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ value, onChang
                      appearance-none cursor-pointer transition-shadow"
         >
           <option value="" disabled>Выберите сервис...</option>
-          {DEFAULT_SERVICES.map((service) => (
-            <option key={service.value} value={service.value}>
-              {service.label}
-            </option>
-          ))}
+          {services.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <ChevronDown
           size={18}
